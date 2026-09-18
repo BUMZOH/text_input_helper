@@ -80,12 +80,12 @@ def paste_phrase(text: str) -> None:
 #   Show window
 # ================================================
 def show_window() -> None:
-    # print("Hotkey detected.")   # For troubleshooting
+    print("Hotkey detected.")   # For troubleshooting
     root.after(0, _show_window)
 
 
 def _show_window() -> None:
-    # print("Showing window.")    # For troubleshooting
+    print("Showing window.")    # For troubleshooting
 
     root.deiconify()
     root.lift()
@@ -150,8 +150,24 @@ def on_enter(event=None) -> None:
 #   Hotkey
 # ================================================
 def hotkey_worker() -> None:
-    keyboard.add_hotkey(HOTKEY, show_window)
-    keyboard.wait()
+    # keyboard.add_hotkey(HOTKEY, show_window)
+    # keyboard.wait()
+    ##################################
+    hotkey_pressed = False
+
+    while True:
+        ctrl = keyboard.is_pressed("ctrl")
+        shift = keyboard.is_pressed("shift")
+        space = keyboard.is_pressed("space")
+
+        if ctrl and shift and space:
+            if not hotkey_pressed:
+                hotkey_pressed = True
+                show_window()
+        else:
+            hotkey_pressed = False
+
+        time.sleep(0.05)
 
 
 # ================================================
