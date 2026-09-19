@@ -22,6 +22,10 @@ import pyperclip
 BASE_DIR = Path(__file__).resolve().parent
 PHRASES_PATH = BASE_DIR / "phrases.json"
 
+WINDOW_WIDTH = 500
+BASE_WINDOW_HEIGHT = 160
+HEIGHT_PER_PHRASE = 18
+
 
 # ================================================
 #   Load phrases
@@ -90,12 +94,34 @@ def show_window() -> None:
 
 def _show_window() -> None:
     """Show the phrase selection window."""
+    center_window()
+
+    # Show the hidden window.
     root.deiconify()
+    # Bring the window to the front.
     root.lift()
+    # Keep the window on top of other windows.
     root.attributes("-topmost", True)
 
     entry.delete(0, tk.END)
     entry.focus_force()
+
+
+def center_window() -> None:
+    """Move the window to the center of the screen."""
+    # Apply pending window layout updates.
+    root.update_idletasks()
+
+    window_width = root.winfo_width()
+    window_height = root.winfo_height()
+
+    screen_width = root.winfo_screenwidth()
+    screen_height = root.winfo_screenheight()
+
+    x = (screen_width - window_width) // 2
+    y = (screen_height - window_height) // 2
+
+    root.geometry(f"+{x}+{y}")
 
 
 # ================================================
@@ -216,15 +242,47 @@ root = tk.Tk()
 root.withdraw()
 
 root.title("Text Input Helper")
-root.geometry("500x350")
+
+window_height = (
+    BASE_WINDOW_HEIGHT
+    + len(PHRASES) * HEIGHT_PER_PHRASE
+)
+root.geometry(f"{WINDOW_WIDTH}x{window_height}")
+
 root.protocol("WM_DELETE_WINDOW", on_close)
 
+# Title and input area
+input_frame = tk.Frame(root)
+input_frame.pack(
+    fill="x",
+    padx=30,
+    pady=(20, 10),
+)
+
 title_label = tk.Label(
-    root,
+    input_frame,
     text="定型文を選択してください",
     font=("Yu Gothic UI", 14),
 )
-title_label.pack(pady=(20, 10))
+title_label.pack(side="left")
+
+entry = tk.Entry(
+    input_frame,
+    font=("Consolas", 14),
+    width=4,
+    justify="center",
+)
+entry.pack(
+    side="left",
+    padx=(15, 0),
+)
+entry.bind("<Return>", on_enter)
+entry.bind("<space>", on_enter)
+entry.bind("<Escape>", on_escape)
+entry.bind("<Shift_L>", on_shift)
+entry.bind("<Control_L>", on_ctrl)
+
+
 
 for index, phrase in enumerate(PHRASES, start=1):
     label = tk.Label(
@@ -235,18 +293,9 @@ for index, phrase in enumerate(PHRASES, start=1):
     )
     label.pack(fill="x", padx=30, pady=2)
 
-entry = tk.Entry(
-    root,
-    font=("Consolas", 14),
-    width=10,
-)
-entry.pack(pady=20)
 
-entry.bind("<Return>", on_enter)
-entry.bind("<space>", on_enter)
-entry.bind("<Escape>", on_escape)
-entry.bind("<Shift_L>", on_shift)
-entry.bind("<Control_L>", on_ctrl)
+
+
 
 
 # ================================================
