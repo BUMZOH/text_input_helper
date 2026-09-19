@@ -5,6 +5,7 @@
 # The ALIAS folder must be included in the PATH environment variable.
 # ========================================================================
 import json
+import subprocess
 import time
 import tkinter as tk
 from datetime import datetime
@@ -18,8 +19,6 @@ import pyperclip
 # ================================================
 #   Settings
 # ================================================
-HOTKEY = "ctrl+shift+space"
-
 BASE_DIR = Path(__file__).resolve().parent
 PHRASES_PATH = BASE_DIR / "phrases.json"
 
@@ -28,6 +27,7 @@ PHRASES_PATH = BASE_DIR / "phrases.json"
 #   Load phrases
 # ================================================
 def load_phrases(path: Path) -> list[dict]:
+    """Load phrase settings from a JSON file."""
     with path.open(encoding="utf-8") as file:
         return json.load(file)
 
@@ -39,19 +39,20 @@ PHRASES: list[dict] = load_phrases(PHRASES_PATH)
 #   Select phrase
 # ================================================
 def on_shift(event=None) -> None:
+    """Move to the previous phrase number."""
     value = entry.get().strip()
 
     if not value.isdigit():
         number = 1
     else:
         number = max(int(value) - 1, 1)
-    
 
     entry.delete(0, tk.END)
     entry.insert(0, str(number))
 
 
 def on_ctrl(event=None) -> None:
+    """Move to the next phrase number."""
     value = entry.get().strip()
 
     if not value.isdigit():
@@ -67,10 +68,13 @@ def on_ctrl(event=None) -> None:
 #   Paste phrase
 # ================================================
 def paste_phrase(text: str) -> None:
+    """Copy text to the clipboard and paste it."""
     pyperclip.copy(text)
 
+    # Hide the window before pasting.
     root.withdraw()
 
+    # Wait for focus to return to the previous window.
     time.sleep(0.2)
 
     keyboard.press_and_release("ctrl+v")
@@ -80,13 +84,12 @@ def paste_phrase(text: str) -> None:
 #   Show window
 # ================================================
 def show_window() -> None:
-    print("Hotkey detected.")   # For troubleshooting
+    """Request the Tkinter main thread to show the window."""
     root.after(0, _show_window)
 
 
 def _show_window() -> None:
-    print("Showing window.")    # For troubleshooting
-
+    """Show the phrase selection window."""
     root.deiconify()
     root.lift()
     root.attributes("-topmost", True)
@@ -99,6 +102,7 @@ def _show_window() -> None:
 #   Escape key
 # ================================================
 def on_escape(event=None) -> None:
+    """Hide the window when Escape is pressed."""
     entry.delete(0, tk.END)
     root.withdraw()
 
@@ -107,6 +111,7 @@ def on_escape(event=None) -> None:
 #   Close window
 # ================================================
 def on_close() -> None:
+    """Hide the window instead of closing the application."""
     root.withdraw()
 
 
@@ -114,9 +119,20 @@ def on_close() -> None:
 #   Enter key
 # ================================================
 def on_enter(event=None) -> None:
+    """Create and paste the selected phrase."""
     value = entry.get().strip()
 
     if not value.isdigit():
+        return
+
+    # Open phrases.json with Notepad.
+    if value == "999":
+        entry.delete(0, tk.END)
+        root.withdraw()
+
+        subprocess.Popen(
+            ["notepad.exe", str(PHRASES_PATH)]
+        )
         return
 
     index = int(value) - 1
@@ -126,9 +142,11 @@ def on_enter(event=None) -> None:
 
     phrase = PHRASES[index]
 
+    # Generate today's date dynamically.
     if phrase["name"] == "TODAY_YYYY/MM/DD":
         text = datetime.now().strftime("%Y/%m/%d")
 
+    # Generate a folder name using the clipboard text.
     elif phrase["name"] == "FOLDER_NAME":
         clipboard_text = pyperclip.paste()
 
@@ -149,23 +167,13 @@ def on_enter(event=None) -> None:
 # ================================================
 #   Hotkey
 # ================================================
-# def hotkey_worker() -> None:
-#     hotkey_pressed = False
-
-#     while True:
-#         ctrl = keyboard.is_pressed("ctrl")
-#         shift = keyboard.is_pressed("shift")
-#         space = keyboard.is_pressed("space")
-
-#         if ctrl and shift and space:
-#             if not hotkey_pressed:
-#                 hotkey_pressed = True
-#                 show_window()
-#         else:
-#             hotkey_pressed = False
-
-#         time.sleep(0.05)
 def hotkey_worker() -> None:
+    """
+    Monitor Ctrl + Shift + Space.
+
+    Space is blocked before it is pressed so that the Space key
+    is not sent to the active application.
+    """
     hotkey_pressed = False
     space_blocked = False
 
@@ -181,21 +189,25 @@ def hotkey_worker() -> None:
 
             space = keyboard.is_pressed("space")
 
-            if space:
-                if not hotkey_pressed:
-                    hotkey_pressed = True
-                    show_window()
-            else:
+            # Trigger only once while the hotkey is held down.
+            if space and not hotkey_pressed:
+                hotkey_pressed = True
+                show_window()
+
+            elif not space:
                 hotkey_pressed = False
 
         else:
             hotkey_pressed = False
 
+            # Restore the Space key when Ctrl + Shift are released.
             if space_blocked:
                 keyboard.unblock_key("space")
                 space_blocked = False
 
+        # Reduce CPU usage while keeping good responsiveness.
         time.sleep(0.01)
+
 
 # ================================================
 #   Tkinter UI
@@ -229,6 +241,7 @@ entry = tk.Entry(
     width=10,
 )
 entry.pack(pady=20)
+
 entry.bind("<Return>", on_enter)
 entry.bind("<space>", on_enter)
 entry.bind("<Escape>", on_escape)
@@ -237,7 +250,7 @@ entry.bind("<Control_L>", on_ctrl)
 
 
 # ================================================
-#   Start application
+#   Start hotkey worker
 # ================================================
 thread = Thread(
     target=hotkey_worker,
@@ -255,9 +268,11 @@ print("=" * 50)
 print()
 print("Text Input Helper is running.")
 print()
-print(f"Hotkey: {HOTKEY}")
+print("Hotkey: Ctrl + Shift + SPACE")
 print()
 print("Press the hotkey to open the phrase selection window.")
+print()
+print("Enter 999 to edit phrases.json.")
 print()
 print("To exit the application, close this console window.")
 print()
@@ -268,4 +283,3 @@ print("=" * 50)
 #   Main loop
 # ================================================
 root.mainloop()
-
