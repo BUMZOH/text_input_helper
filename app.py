@@ -149,26 +149,53 @@ def on_enter(event=None) -> None:
 # ================================================
 #   Hotkey
 # ================================================
+# def hotkey_worker() -> None:
+#     hotkey_pressed = False
+
+#     while True:
+#         ctrl = keyboard.is_pressed("ctrl")
+#         shift = keyboard.is_pressed("shift")
+#         space = keyboard.is_pressed("space")
+
+#         if ctrl and shift and space:
+#             if not hotkey_pressed:
+#                 hotkey_pressed = True
+#                 show_window()
+#         else:
+#             hotkey_pressed = False
+
+#         time.sleep(0.05)
 def hotkey_worker() -> None:
-    # keyboard.add_hotkey(HOTKEY, show_window)
-    # keyboard.wait()
-    ##################################
     hotkey_pressed = False
+    space_blocked = False
 
     while True:
         ctrl = keyboard.is_pressed("ctrl")
         shift = keyboard.is_pressed("shift")
-        space = keyboard.is_pressed("space")
 
-        if ctrl and shift and space:
-            if not hotkey_pressed:
-                hotkey_pressed = True
-                show_window()
+        # Block Space in advance while Ctrl + Shift are pressed.
+        if ctrl and shift:
+            if not space_blocked:
+                keyboard.block_key("space")
+                space_blocked = True
+
+            space = keyboard.is_pressed("space")
+
+            if space:
+                if not hotkey_pressed:
+                    hotkey_pressed = True
+                    show_window()
+            else:
+                hotkey_pressed = False
+
         else:
             hotkey_pressed = False
 
-        time.sleep(0.05)
+            if space_blocked:
+                keyboard.unblock_key("space")
+                space_blocked = False
 
+        time.sleep(0.01)
 
 # ================================================
 #   Tkinter UI
